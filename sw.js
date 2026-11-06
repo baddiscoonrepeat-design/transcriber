@@ -1,4 +1,4 @@
-const CACHE = "transcriber-v1";
+const CACHE = "transcriber-v2";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -13,26 +13,26 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Оболочка приложения и библиотека (jsdelivr) — из кэша; модели кэширует сама Transformers.js
+function store(req, res) {
+  if (res.ok) {
+    const copy = res.clone();
+    caches.open(CACHE).then((c) => c.put(req, copy));
+  }
+  return res;
+}
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  const ours = url.origin === location.origin;
-  const lib = url.hostname === "cdn.jsdelivr.net";
-  if (!ours && !lib) return;
 
-  e.respondWith(
-    caches.match(req).then(
-      (hit) =>
-        hit ||
-        fetch(req).then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-          return res;
-        })
-    )
-  );
+  // Файлы приложения: сначала сеть (чтобы обновления доходили), без сети — из кэша
+  if (url.origin === location.origin) {
+    e.respondWith(fetch(req).then((res) => store(req, res)).catch(() => caches.match(req)));
+    return;
+  }
+  // Библиотеки с jsdelivr (Transformers.js, ffmpeg): из кэша, один раз скачали — дальше офлайн
+  if (url.hostname === "cdn.jsdelivr.net") {
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => store(req, res))));
+  }
 });
