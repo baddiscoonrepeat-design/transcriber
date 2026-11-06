@@ -272,7 +272,7 @@ aiFixBtn.addEventListener("click", async () => {
         "Authorization": `Bearer ${key}`
       },
       body: JSON.stringify({
-        model: "llama3-70b-8192", 
+        model: "llama-3.3-70b-versatile", // ОБНОВЛЕННАЯ АКТУАЛЬНАЯ МОДЕЛЬ
         temperature: 0.2, 
         messages: [
           {
@@ -303,7 +303,6 @@ aiFixBtn.addEventListener("click", async () => {
   }
 });
 // ----------------------------
-
 function setStatus(text, state = "") {
   statusEl.textContent = text;
   dot.className = "dot " + state;
