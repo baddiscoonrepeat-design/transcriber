@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d3b4f">
+<title>Расшифровка речи</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>
+:root {
+  --bg: #eef1f3; --surface: #ffffff; --ink: #14212b; --muted: #5a6b78;
+  --line: #d3dbe0; --accent: #1d3b4f; --accent-ink: #ffffff; --rec: #c8372d;
+  --ok: #2b7a4b;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f171d; --surface: #18232b; --ink: #e7edf1; --muted: #93a4b1;
+    --line: #2a3943; --accent: #8fc3de; --accent-ink: #0f171d; --rec: #ff6a5e;
+    --ok: #6fcf97;
+  }
+}
+* { box-sizing: border-box; }
+html { color-scheme: light dark; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.5 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+main { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 1.5rem; margin: 8px 0 4px; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+
+.panel {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 16px; margin-bottom: 14px;
+}
+.row { display: flex; gap: 10px; }
+.row > label { flex: 1; min-width: 0; }
+label { display: block; font-size: .85rem; color: var(--muted); }
+select {
+  width: 100%; margin-top: 4px; padding: 10px; font: inherit; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+}
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+button, .filebtn {
+  font: inherit; font-weight: 600; padding: 14px 10px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  text-align: center; cursor: pointer; display: block;
+}
+button.primary, .filebtn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.recording { background: var(--rec); color: #fff; border-color: var(--rec); }
+button:disabled, .filebtn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.status { display: flex; align-items: center; gap: 10px; min-height: 24px; font-size: .92rem; color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
+.dot.busy { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+.dot.rec { background: var(--rec); animation: pulse .8s ease-in-out infinite; }
+.dot.ok { background: var(--ok); }
+@keyframes pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none !important; } }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 10px; display: none; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+
+#result {
+  width: 100%; min-height: 220px; resize: vertical; padding: 12px; font: inherit; line-height: 1.6;
+  color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+}
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.tools button { padding: 10px 14px; font-size: .9rem; }
+.tools .check { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: .9rem; }
+.note { color: var(--muted); font-size: .82rem; margin: 18px 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Расшифровка речи</h1>
+  <p class="sub">Аудио обрабатывается на телефоне и никуда не отправляется. После первой загрузки модели приложение работает офлайн.</p>
+
+  <section class="panel">
+    <div class="row">
+      <label>Язык
+        <select id="lang">
+          <option value="auto">Определить сам</option>
+          <option value="russian" selected>Русский</option>
+          <option value="english">Английский</option>
+          <option value="ukrainian">Украинский</option>
+          <option value="german">Немецкий</option>
+          <option value="french">Французский</option>
+          <option value="spanish">Испанский</option>
+          <option value="turkish">Турецкий</option>
+          <option value="kazakh">Казахский</option>
+        </select>
+      </label>
+      <label>Точность
+        <select id="model">
+          <option value="onnx-community/whisper-tiny">Быстро (~40 МБ)</option>
+          <option value="onnx-community/whisper-base" selected>Баланс (~80 МБ)</option>
+          <option value="onnx-community/whisper-small">Точно (~250 МБ)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="actions">
+      <label class="filebtn" id="filebtn" for="file">Выбрать файл</label>
+      <input type="file" id="file" accept="audio/*,video/*">
+      <button id="rec" class="primary" style="background:var(--surface);color:var(--ink);border-color:var(--line)">Записать голос</button>
+    </div>
+
+    <div class="status" style="margin-top:14px"><span class="dot" id="dot"></span><span id="status">Выбери файл или запиши голос</span></div>
+    <div class="bar" id="bar"><i id="barfill"></i></div>
+  </section>
+
+  <section class="panel">
+    <textarea id="result" placeholder="Здесь появится текст" aria-label="Результат"></textarea>
+    <div class="tools">
+      <button id="copy" disabled>Копировать</button>
+      <button id="save" disabled>Скачать .txt</button>
+      <button id="share" disabled>Поделиться</button>
+      <label class="check"><input type="checkbox" id="ts"> с таймкодами</label>
+    </div>
+  </section>
+
+  <p class="note">Первый запуск скачивает модель: нужен интернет, потом она хранится в памяти браузера. Длинные записи на слабых телефонах обрабатываются дольше самой записи.</p>
+</main>
+
+<script type="module">
+import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6";
+
+env.allowLocalModels = false;
+env.useBrowserCache = true;
+
+const $ = (id) => document.getElementById(id);
+const dot = $("dot"), statusEl = $("status"), bar = $("bar"), fill = $("barfill");
+const result = $("result");
+let transcriber = null, loadedModel = null, busy = false, chunks = [];
+
+function setStatus(text, state = "") {
+  statusEl.textContent = text;
+  dot.className = "dot " + state;
+}
+function setBusy(v) {
+  busy = v;
+  $("filebtn").setAttribute("aria-disabled", v);
+  $("file").disabled = v;
+  $("rec").disabled = v && !recorder;
+}
+function showProgress(p) {
+  bar.style.display = p == null ? "none" : "block";
+  if (p != null) fill.style.width = Math.round(p) + "%";
+}
+
+async function getModel(name) {
+  if (transcriber && loadedModel === name) return transcriber;
+  transcriber = null;
+  const files = {};
+  setStatus("Загружаю модель…", "busy");
+  transcriber = await pipeline("automatic-speech-recognition", name, {
+    device: "wasm",
+    dtype: "q8",
+    progress_callback: (p) => {
+      if (p.status === "progress" && p.file) {
+        files[p.file] = { loaded: p.loaded, total: p.total };
+        let l = 0, t = 0;
+        for (const f of Object.values(files)) { l += f.loaded; t += f.total; }
+        if (t) {
+          showProgress((l / t) * 100);
+          setStatus(`Загружаю модель: ${(l / 1048576).toFixed(0)} из ${(t / 1048576).toFixed(0)} МБ`, "busy");
+        }
+      }
+    },
+  });
+  showProgress(null);
+  loadedModel = name;
+  return transcriber;
+}
+
+async function toMono16k(blob) {
+  const buf = await blob.arrayBuffer();
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  let audio;
+  try { audio = await ctx.decodeAudioData(buf); } finally { ctx.close(); }
+  const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(audio.duration * 16000)), 16000);
+  const src = off.createBufferSource();
+  src.buffer = audio;
+  src.connect(off.destination);
+  src.start();
+  const rendered = await off.startRendering();
+  return rendered.getChannelData(0);
+}
+
+function fmt(t) {
+  t = Math.max(0, Math.floor(t || 0));
+  const m = Math.floor(t / 60), s = t % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+function render() {
+  const withTs = $("ts").checked;
+  result.value = chunks
+    .map((c) => (withTs ? `[${fmt(c.timestamp[0])}] ` : "") + c.text.trim())
+    .join(withTs ? "\n" : " ")
+    .trim();
+  const has = result.value.length > 0;
+  $("copy").disabled = $("save").disabled = !has;
+  $("share").disabled = !has || !navigator.share;
+}
+
+async function transcribe(blob) {
+  if (busy) return;
+  setBusy(true);
+  chunks = [];
+  result.value = "";
+  render();
+  try {
+    const model = await getModel($("model").value);
+    setStatus("Готовлю аудио…", "busy");
+    const audio = await toMono16k(blob);
+    setStatus(`Расшифровываю (${fmt(audio.length / 16000)})… не закрывай приложение`, "busy");
+    const lang = $("lang").value;
+    const out = await model(audio, {
+      chunk_length_s: 30,
+      stride_length_s: 5,
+      language: lang === "auto" ? null : lang,
+      task: "transcribe",
+      return_timestamps: true,
+    });
+    chunks = out.chunks && out.chunks.length ? out.chunks : [{ text: out.text, timestamp: [0, 0] }];
+    render();
+    setStatus(result.value ? "Готово" : "Речь не найдена", result.value ? "ok" : "");
+  } catch (e) {
+    console.error(e);
+    setStatus("Ошибка: " + (e.message || e) + ". Проверь интернет при первой загрузке и формат файла.", "");
+  } finally {
+    setBusy(false);
+    showProgress(null);
+  }
+}
+
+// Файл
+$("file").addEventListener("change", (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (f) transcribe(f);
+});
+
+// Запись с микрофона
+let recorder = null, recChunks = [];
+$("rec").addEventListener("click", async () => {
+  if (recorder) { recorder.stop(); return; }
+  if (busy) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recorder = new MediaRecorder(stream);
+    recChunks = [];
+    recorder.ondataavailable = (e) => e.data.size && recChunks.push(e.data);
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(recChunks, { type: recorder.mimeType });
+      recorder = null;
+      $("rec").textContent = "Записать голос";
+      $("rec").classList.remove("recording");
+      transcribe(blob);
+    };
+    recorder.start();
+    $("rec").textContent = "Остановить";
+    $("rec").classList.add("recording");
+    setStatus("Идёт запись…", "rec");
+  } catch (e) {
+    setStatus("Нет доступа к микрофону. Разреши его в настройках сайта.", "");
+  }
+});
+
+// Результат
+$("ts").addEventListener("change", render);
+$("copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(result.value); setStatus("Скопировано", "ok"); }
+  catch { result.select(); document.execCommand("copy"); setStatus("Скопировано", "ok"); }
+});
+$("save").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([result.value], { type: "text/plain;charset=utf-8" }));
+  a.download = "расшифровка.txt";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+$("share").addEventListener("click", () => navigator.share({ text: result.value }).catch(() => {}));
+result.addEventListener("input", () => {
+  const has = result.value.length > 0;
+  $("copy").disabled = $("save").disabled = !has;
+});
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
