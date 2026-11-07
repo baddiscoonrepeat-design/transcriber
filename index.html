@@ -11,7 +11,7 @@
 :root {
   --bg: #eef1f3; --surface: #ffffff; --ink: #14212b; --muted: #5a6b78;
   --line: #d3dbe0; --accent: #1d3b4f; --accent-ink: #ffffff; --rec: #c8372d;
-  --ok: #2b7a4b; --highlight: #f8ecd4;
+  --ok: #2b7a4b; --highlight: #f8ecd4; --warn: #b35c00;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -20,7 +20,7 @@
   :root {
     --bg: #0f171d; --surface: #18232b; --ink: #e7edf1; --muted: #93a4b1;
     --line: #2a3943; --accent: #8fc3de; --accent-ink: #0f171d; --rec: #ff6a5e;
-    --ok: #6fcf97; --highlight: #3a3220;
+    --ok: #6fcf97; --highlight: #3a3220; --warn: #ffb86b;
   }
 }
 * { box-sizing: border-box; }
@@ -51,12 +51,29 @@ select {
 button, .filebtn {
   font: inherit; font-weight: 600; padding: 14px 10px; border-radius: 12px;
   border: 1px solid var(--line); background: var(--surface); color: var(--ink);
-  text-align: center; cursor: pointer; display: block;
+  text-align: center; cursor: pointer; display: block; transition: .15s;
 }
+button:hover:not(:disabled), .filebtn:hover { border-color: var(--accent); }
 button.primary, .filebtn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 button.recording { background: var(--rec); color: #fff; border-color: var(--rec); }
 button:disabled, .filebtn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
 input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+/* Поле API-ключа */
+.key-row { display: flex; gap: 8px; margin-top: 10px; }
+.key-row input {
+  flex: 1; padding: 10px; font: inherit; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+}
+.key-row .btn-eye {
+  padding: 10px 12px; font-size: 1rem; min-width: 48px;
+}
+.key-hint {
+  font-size: .78rem; color: var(--muted); margin: 6px 0 0;
+  display: flex; align-items: center; gap: 6px;
+}
+.key-hint.ok { color: var(--ok); }
+.key-hint.warn { color: var(--warn); }
 
 .status { display: flex; align-items: center; gap: 10px; min-height: 24px; font-size: .92rem; color: var(--muted); }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
@@ -88,7 +105,7 @@ input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
 <body>
 <main>
   <h1>Расшифровка речи</h1>
-  <p class="sub">Аудио обрабатывается на телефоне и никуда не отправляется. После первой загрузки модели приложение работает офлайн.</p>
+  <p class="sub">Аудио обрабатывается на телефоне и никуда не отправляется. После первой загрузки модели приложение работает офлайн (кроме кнопки ИИ).</p>
 
   <section class="panel">
     <div class="row">
@@ -124,11 +141,14 @@ input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
   <section class="panel">
     <textarea id="result" placeholder="Здесь появится текст" aria-label="Результат"></textarea>
-    
-    <div style="display: flex; gap: 8px; margin-top: 10px;">
-      <input type="password" id="api-key" placeholder="API-ключ OpenRouter" title="Введи API-ключ OpenRouter" style="flex: 1; padding: 10px; font: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; color: var(--ink);">
-      <button id="ai-fix" class="primary" style="padding: 10px 14px; border-radius: 10px;">✨ Исправить ИИ</button>
+
+    <div class="key-row">
+      <input type="password" id="api-key" placeholder="Ключ авторизации GigaChat (Base64)" title="Введи Authorization Key из GigaChat Studio" autocomplete="off" spellcheck="false">
+      <button id="toggle-key" class="btn-eye" type="button" aria-label="Показать/скрыть ключ">👁️</button>
     </div>
+    <p class="key-hint" id="key-hint">Ключ хранится только на этом устройстве.</p>
+
+    <button id="ai-fix" class="primary" style="margin-top:10px;width:100%;">✨ Исправить GigaChat</button>
 
     <div class="tools" style="margin-top: 14px;">
       <button id="copy" disabled>Копировать</button>
@@ -143,10 +163,10 @@ input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
     <p class="note" style="margin: 0 0 12px">Приложение нашло аббревиатуры, английские термины и твои прошлые замены. Напиши верный вариант и отметь галочкой, чтобы исправить текст и обучить словарь.</p>
     <div id="dict-items"></div>
     <span class="dict-add" id="dict-add">+ Добавить слово из текста вручную</span>
-    <button id="dict-apply" class="primary">Применить и запомнить</button>
+    <button id="dict-apply" class="primary" style="margin-top:8px;width:100%;">Применить и запомнить</button>
   </section>
 
-  <p class="note">Первый запуск скачивает модель: нужен интернет. Затем всё работает офлайн (кроме кнопки ИИ).</p>
+  <p class="note">Первый запуск скачивает модель: нужен интернет. Затем всё работает офлайн.</p>
 </main>
 
 <script type="module">
@@ -158,9 +178,25 @@ env.useBrowserCache = true;
 const $ = (id) => document.getElementById(id);
 const dot = $("dot"), statusEl = $("status"), bar = $("bar"), fill = $("barfill");
 const result = $("result");
-let transcriber = null, loadedModel = null, busy = false, chunks = [];
+let transcriber = null, loadedKey = null, busy = false, chunks = [];
 
-// --- ЛОГИКА СЛОВАРЯ ЗАМЕН ---
+/* ================= СТАТУС И ПРОГРЕСС ================= */
+function setStatus(text, state = "") {
+  statusEl.textContent = text;
+  dot.className = "dot " + state;
+}
+function setBusy(v) {
+  busy = v;
+  $("filebtn").setAttribute("aria-disabled", v);
+  $("file").disabled = v;
+  $("rec").disabled = v && !recorder;
+}
+function showProgress(p) {
+  bar.style.display = p == null ? "none" : "block";
+  if (p != null) fill.style.width = Math.round(p) + "%";
+}
+
+/* ================= СЛОВАРЬ АВТОЗАМЕН ================= */
 let dictKeys = JSON.parse(localStorage.getItem("whisper-dict") || "{}");
 
 function renderDictRow(word, replacement = "", checked = false) {
@@ -182,14 +218,13 @@ function analyzeTextForDict() {
   if (!text) return;
   const items = $("dict-items");
   items.innerHTML = "";
-  
+
   const matches = text.match(/[A-Za-z]+|[А-ЯЁ]{2,}/g) || [];
   let unique = [...new Set(matches)];
-  
+
   for (const k of Object.keys(dictKeys)) {
     if (text.includes(k) && !unique.includes(k)) unique.unshift(k);
   }
-  
   if (unique.length === 0) return;
 
   unique.forEach(w => {
@@ -211,16 +246,13 @@ function escapeRegExp(string) {
 $("dict-apply").addEventListener("click", () => {
   const rows = $("dict-items").querySelectorAll(".dict-row");
   const changes = [];
-  
+
   rows.forEach(row => {
     const check = row.querySelector(".d-check").checked;
     const word = row.querySelector(".d-word").textContent;
     const val = row.querySelector(".d-val").value.trim();
     if (val) {
-      if (check) {
-        dictKeys[word] = val;
-        changes.push({ w: word, v: val });
-      }
+      if (check) { dictKeys[word] = val; changes.push({ w: word, v: val }); }
     } else if (!val && dictKeys[word] && !check) {
       delete dictKeys[word];
     }
@@ -241,43 +273,102 @@ $("dict-apply").addEventListener("click", () => {
   }
   $("dict-panel").style.display = "none";
 });
-// ----------------------------
 
-// --- ИНТЕГРАЦИЯ С LLM (OpenRouter) ---
+/* ================= ИНТЕГРАЦИЯ С GIGACHAT ================= */
 const apiKeyInput = $("api-key");
 const aiFixBtn = $("ai-fix");
+const keyHint = $("key-hint");
+const toggleKeyBtn = $("toggle-key");
 
-apiKeyInput.value = localStorage.getItem("llm-api-key") || "";
+apiKeyInput.placeholder = "Ключ авторизации GigaChat (Base64)";
+keyHint.textContent = "Вставь Authorization Key из GigaChat Studio.";
+
+function refreshKeyHint() {
+  const saved = !!localStorage.getItem("gigachat-auth-key");
+  if (!saved) {
+    keyHint.textContent = "Ключ хранится только на этом устройстве.";
+    keyHint.className = "key-hint";
+  } else {
+    keyHint.textContent = "Ключ авторизации сохранён ✔";
+    keyHint.className = "key-hint ok";
+  }
+}
+
+apiKeyInput.value = localStorage.getItem("gigachat-auth-key") || "";
+refreshKeyHint();
+
 apiKeyInput.addEventListener("change", () => {
-  localStorage.setItem("llm-api-key", apiKeyInput.value.trim());
+  localStorage.setItem("gigachat-auth-key", apiKeyInput.value.trim());
+  refreshKeyHint();
 });
+
+toggleKeyBtn.addEventListener("click", () => {
+  const isPass = apiKeyInput.type === "password";
+  apiKeyInput.type = isPass ? "text" : "password";
+  toggleKeyBtn.textContent = isPass ? "🙈" : "👁️";
+});
+
+// Кэш токена доступа (живёт 30 минут)
+let cachedToken = null;
+let tokenExpiry = 0;
+
+async function getGigaChatToken(authKey) {
+  if (cachedToken && Date.now() < tokenExpiry - 60000) {
+    return cachedToken;
+  }
+
+  const rquid = crypto.randomUUID();
+
+  const response = await fetch("https://ngw.devices.sberbank.ru:9443/api/v2/oauth", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "application/json",
+      "RqUID": rquid,
+      "Authorization": `Basic ${authKey}`
+    },
+    body: "scope=GIGACHAT_API_PERS"
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`Ошибка авторизации GigaChat (${response.status}): проверь ключ. ${errText}`);
+  }
+
+  const data = await response.json();
+  cachedToken = data.access_token;
+  tokenExpiry = data.expires_at;
+  return cachedToken;
+}
 
 aiFixBtn.addEventListener("click", async () => {
   const text = result.value.trim();
-  const key = apiKeyInput.value.trim();
-  
+  const authKey = apiKeyInput.value.trim();
+
   if (!text) { alert("Сначала расшифруй аудио!"); return; }
-  if (!key) { alert("Введи API-ключ от OpenRouter"); return; }
+  if (!authKey) { alert("Введи ключ авторизации GigaChat"); return; }
 
   aiFixBtn.disabled = true;
   const originalText = aiFixBtn.textContent;
   aiFixBtn.textContent = "⏳ Обработка...";
-  setStatus("ИИ анализирует и исправляет текст...", "busy");
+  setStatus("GigaChat анализирует текст...", "busy");
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const token = await getGigaChatToken(authKey);
+
+    const response = await fetch("https://api.giga.chat/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${key}`,
-        "HTTP-Referer": window.location.href
+        "Accept": "application/json",
+        "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3.3-70b-instruct:free", 
-        temperature: 0.2, 
+        model: "GigaChat-2-Pro",
+        temperature: 0.2,
         messages: [
           {
-            role: "system", 
+            role: "system",
             content: "Ты профессиональный редактор. Твоя задача — исправить опечатки, ошибки распознавания речи (включая неверно услышанные специфические термины) и расставить знаки препинания в тексте. Не меняй структуру предложений, стиль речи и не удаляй таймкоды, если они есть. В ответе верни строго только исправленный текст без каких-либо вводных слов или комментариев."
           },
           { role: "user", content: text }
@@ -286,41 +377,28 @@ aiFixBtn.addEventListener("click", async () => {
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || "Ошибка API");
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Ошибка API (${response.status})`);
     }
 
     const data = await response.json();
     result.value = data.choices[0].message.content.trim();
-    setStatus("Текст успешно исправлен ИИ (OpenRouter)", "ok");
-    
+    setStatus("Текст успешно исправлен GigaChat", "ok");
+
+    const has = result.value.length > 0;
+    $("copy").disabled = $("save").disabled = !has;
+
   } catch (error) {
     console.error(error);
-    alert("Ошибка LLM: " + error.message);
-    setStatus("Ошибка подключения к ИИ", "");
+    alert("Ошибка GigaChat: " + error.message);
+    setStatus("Ошибка подключения к GigaChat", "");
   } finally {
     aiFixBtn.disabled = false;
     aiFixBtn.textContent = originalText;
   }
 });
-// ----------------------------
 
-function setStatus(text, state = "") {
-  statusEl.textContent = text;
-  dot.className = "dot " + state;
-}
-function setBusy(v) {
-  busy = v;
-  $("filebtn").setAttribute("aria-disabled", v);
-  $("file").disabled = v;
-  $("rec").disabled = v && !recorder;
-}
-function showProgress(p) {
-  bar.style.display = p == null ? "none" : "block";
-  if (p != null) fill.style.width = Math.round(p) + "%";
-}
-
-let loadedKey = null;
+/* ================= ЗАГРУЗКА МОДЕЛИ WHISPER ================= */
 async function getModel(name, device) {
   const key = name + "|" + device;
   if (transcriber && loadedKey === key) return transcriber;
@@ -329,7 +407,9 @@ async function getModel(name, device) {
   setStatus("Загружаю модель…", "busy");
   transcriber = await pipeline("automatic-speech-recognition", name, {
     device,
-    dtype: device === "webgpu" ? { encoder_model: name.includes("large") ? "fp16" : "fp32", decoder_model_merged: "q4" } : "q8",
+    dtype: device === "webgpu"
+      ? { encoder_model: name.includes("large") ? "fp16" : "fp32", decoder_model_merged: "q4" }
+      : "q8",
     progress_callback: (p) => {
       if (p.status === "progress" && p.file) {
         files[p.file] = { loaded: p.loaded, total: p.total };
@@ -347,6 +427,7 @@ async function getModel(name, device) {
   return transcriber;
 }
 
+/* ================= ДЕКОДИРОВАНИЕ АУДИО ================= */
 async function toMono16k(blob) {
   const buf = await blob.arrayBuffer();
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -365,7 +446,8 @@ let ffmpegPromise = null;
 const FF_APP = "0.12.10", FF_CORE = "0.12.6";
 function loadScript(src) {
   return new Promise((res, rej) => {
-    const s = document.createElement("script"); s.src = src; s.onload = res;
+    const s = document.createElement("script");
+    s.src = src; s.onload = res;
     s.onerror = () => rej(new Error("не удалось загрузить конвертер"));
     document.head.appendChild(s);
   });
@@ -418,6 +500,7 @@ async function decodeAny(blob) {
   return new Float32Array(raw.buffer, 0, Math.floor(raw.byteLength / 4));
 }
 
+/* ================= РЕНДЕР И ОБРАБОТКА ================= */
 function fmt(t) {
   t = Math.max(0, Math.floor(t || 0));
   const m = Math.floor(t / 60), s = t % 60;
@@ -610,6 +693,7 @@ async function transcribe(blob) {
   }
 }
 
+/* ================= СОБЫТИЯ ================= */
 $("file").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) transcribe(f); });
 
 let recorder = null, recChunks = [];
