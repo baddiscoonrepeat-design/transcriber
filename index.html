@@ -330,8 +330,8 @@ aiFixBtn.addEventListener("click", async () => {
         "X-Title": "Speech Transcriber"       // Обязательно для OpenRouter
       },
       body: JSON.stringify({
-        // ИСПОЛЬЗУЕМ БЕСПЛАТНУЮ МОДЕЛЬ QWEN 3.6
-        model: "qwen/qwen3.6-plus:free", 
+        // ИСПОЛЬЗУЕМ АВТОМАТИЧЕСКИЙ РОУТЕР (он сам выберет любую доступную бесплатную модель)
+        model: "openrouter/free", 
         temperature: 0.2,
         messages: [
           {
