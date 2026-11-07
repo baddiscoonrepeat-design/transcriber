@@ -330,7 +330,6 @@ aiFixBtn.addEventListener("click", async () => {
         "X-Title": "Speech Transcriber"       // Обязательно для OpenRouter
       },
       body: JSON.stringify({
-        // ИСПОЛЬЗУЕМ АВТОМАТИЧЕСКИЙ РОУТЕР (он сам выберет любую доступную бесплатную модель)
         model: "openrouter/free", 
         temperature: 0.2,
         messages: [
@@ -349,7 +348,15 @@ aiFixBtn.addEventListener("click", async () => {
     }
 
     const data = await response.json();
-    result.value = data.choices[0].message.content.trim();
+    
+    // --- ЗАЩИТА ОТ ПУСТОГО ОТВЕТА ---
+    const aiContent = data.choices?.[0]?.message?.content;
+    
+    if (!aiContent || aiContent.trim() === "") {
+      throw new Error("Нейросеть вернула пустой ответ. Попробуйте нажать кнопку еще раз.");
+    }
+
+    result.value = aiContent.trim();
     setStatus("Текст успешно исправлен ИИ", "ok");
 
     const has = result.value.length > 0;
