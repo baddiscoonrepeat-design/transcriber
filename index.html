@@ -148,7 +148,7 @@ input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
     </div>
     <p class="key-hint" id="key-hint">Ключ хранится только на этом устройстве.</p>
 
-    <button id="ai-fix" class="primary" style="margin-top:10px;width:100%;">✨ Исправить DeepSeek</button>
+    <button id="ai-fix" class="primary" style="margin-top:10px;width:100%;">✨ Исправить ИИ</button>
 
     <div class="tools" style="margin-top: 14px;">
       <button id="copy" disabled>Копировать</button>
@@ -274,7 +274,7 @@ $("dict-apply").addEventListener("click", () => {
   $("dict-panel").style.display = "none";
 });
 
-/* ================= ИНТЕГРАЦИЯ С OPENROUTER (DEEPSEEK) ================= */
+/* ================= ИНТЕГРАЦИЯ С OPENROUTER ================= */
 const apiKeyInput = $("api-key");
 const aiFixBtn = $("ai-fix");
 const keyHint = $("key-hint");
@@ -318,7 +318,7 @@ aiFixBtn.addEventListener("click", async () => {
   aiFixBtn.disabled = true;
   const originalText = aiFixBtn.textContent;
   aiFixBtn.textContent = "⏳ Обработка...";
-  setStatus("DeepSeek анализирует текст...", "busy");
+  setStatus("ИИ анализирует текст...", "busy");
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -330,7 +330,8 @@ aiFixBtn.addEventListener("click", async () => {
         "X-Title": "Speech Transcriber"       // Обязательно для OpenRouter
       },
       body: JSON.stringify({
-        model: "deepseek/deepseek-chat-v3-0324:free", // Бесплатная модель DeepSeek
+        // ИСПОЛЬЗУЕМ БЕСПЛАТНУЮ МОДЕЛЬ QWEN 3.6
+        model: "qwen/qwen3.6-plus:free", 
         temperature: 0.2,
         messages: [
           {
@@ -349,14 +350,14 @@ aiFixBtn.addEventListener("click", async () => {
 
     const data = await response.json();
     result.value = data.choices[0].message.content.trim();
-    setStatus("Текст успешно исправлен DeepSeek", "ok");
+    setStatus("Текст успешно исправлен ИИ", "ok");
 
     const has = result.value.length > 0;
     $("copy").disabled = $("save").disabled = !has;
 
   } catch (error) {
     console.error(error);
-    alert("Ошибка DeepSeek: " + error.message);
+    alert("Ошибка ИИ: " + error.message);
     setStatus("Ошибка подключения к ИИ", "");
   } finally {
     aiFixBtn.disabled = false;
