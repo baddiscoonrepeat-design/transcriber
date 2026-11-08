@@ -202,24 +202,22 @@ function setupKey(inputId, toggleId, hintId, storageKey, placeholderText) {
 setupKey("ofox-key", "toggle-ofox", "ofox-hint", "ofox-api-key", "sk-...");
 setupKey("openrouter-key", "toggle-openrouter", "openrouter-hint", "openrouter-api-key", "sk-or-v1-...");
 
-/* ================= РАСШИФРОВКА ЧЕРЕЗ OFOX ================= */
+/* ================= РАСШИФРОВКА ЧЕРЕЗ OFOX (С ПРОКСИ) ================= */
 async function transcribeWithWhisper(blob) {
   const key = $("ofox-key").value.trim();
   if (!key) throw new Error("Введи ключ Ofox.ai в разделе 'Ключи API'");
 
   const formData = new FormData();
-  // Важно: указываем имя файла с расширением, иначе некоторые API могут ругаться
   formData.append("file", blob, "audio.webm");
-  
-  // Используем актуальную модель Ofox
   formData.append("model", "openai/gpt-4o-mini-transcribe"); 
   
   const lang = $("lang").value;
   if (lang) formData.append("language", lang);
 
-  setStatus("Отправляю аудио в Ofox AI…", "busy");
+  setStatus("Отправляю аудио через прокси…", "busy");
 
-  const response = await fetch("https://api.ofox.ai/v1/audio/transcriptions", {
+  // ИСПОЛЬЗУЕМ ВАШ CLOUDFLARE WORKER
+  const response = await fetch("https://proud-hill-2d1a.baddiscoonrepeat.workers.dev/", {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}` },
     body: formData
