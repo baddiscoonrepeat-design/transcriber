@@ -1,0 +1,11 @@
+# kotlinx.serialization
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
+-keepclasseswithmembers class kotlinx.serialization.json.** { kotlinx.serialization.KSerializer serializer(...); }
+-keep,includedescriptorclasses class ru.minutes.assistant.**$$serializer { *; }
+-keepclassmembers class ru.minutes.assistant.** { *** Companion; }
+-keepclasseswithmembers class ru.minutes.assistant.** { kotlinx.serialization.KSerializer serializer(...); }
+-dontwarn org.bouncycastle.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**
